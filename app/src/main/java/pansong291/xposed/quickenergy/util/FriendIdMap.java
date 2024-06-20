@@ -1,20 +1,39 @@
 package pansong291.xposed.quickenergy.util;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import pansong291.xposed.quickenergy.hook.FriendManager;
+import pansong291.xposed.quickenergy.hook.XposedHook;
 
 public class FriendIdMap {
     private static final String TAG = FriendIdMap.class.getCanonicalName();
 
     public static boolean shouldReload = false;
 
-    public static String currentUid;
+    private static String currentUid = null;
 
     private static Map<String, String> idMap;
     private static boolean hasChanged = false;
 
+    public static void setCurrentUid(String uid) {
+        if (currentUid == null || !currentUid.equals(uid)) {
+            currentUid = uid;
+            FriendManager.fillUser(XposedHook.classLoader);
+            PluginUtils.invoke(FriendIdMap.class, PluginUtils.PluginAction.INIT);
+        }
+    }
+
+    public static String getCurrentUid() {
+        return currentUid;
+    }
+
     public static void putIdMapIfEmpty(String key, String value) {
-        if (key == null || key.isEmpty()) return;
+        if (key == null || key.isEmpty())
+            return;
         if (!getIdMap().containsKey(key)) {
             getIdMap().put(key, value);
             hasChanged = true;
@@ -22,7 +41,8 @@ public class FriendIdMap {
     }
 
     public static void putIdMap(String key, String value) {
-        if (key == null || key.isEmpty()) return;
+        if (key == null || key.isEmpty())
+            return;
         if (getIdMap().containsKey(key)) {
             if (!getIdMap().get(key).equals(value)) {
                 getIdMap().remove(key);
@@ -36,7 +56,8 @@ public class FriendIdMap {
     }
 
     public static void removeIdMap(String key) {
-        if (key == null || key.isEmpty()) return;
+        if (key == null || key.isEmpty())
+            return;
         if (getIdMap().containsKey(key)) {
             getIdMap().remove(key);
             hasChanged = true;
@@ -58,26 +79,42 @@ public class FriendIdMap {
     }
 
     public static String getNameById(String id) {
-        if (id == null || id.isEmpty()) return id;
+        if (id == null || id.isEmpty())
+            return id;
         if (getIdMap().containsKey(id)) {
             String n = getIdMap().get(id);
             int ind = n.lastIndexOf('(');
-            if (ind > 0) n = n.substring(0, ind);
-            if (!n.equals("*")) return n;
+            if (ind > 0)
+                n = n.substring(0, ind);
+            if (!n.equals("*"))
+                return n;
         } else {
             putIdMap(id, "*(*)");
         }
         return id;
     }
 
-    public static List<String> getIncompleteUnknownIds() {
+//    public static List<String> getIncompleteUnknownIds() {
+//        List<String> idList = new ArrayList<>();
+//        for (Map.Entry<String, String> entry : getIdMap().entrySet()) {
+//            if ("我".equals(entry.getValue())) {
+//                continue;
+//            }
+//            if (entry.getValue().split("\\|").length < 2) {
+//                idList.add(entry.getKey());
+//                // Log.i(TAG, "未知id: " + entry.getKey());
+//            }
+//        }
+//        return idList;
+//    }
+
+    public static List<String> getFriendIds() {
         List<String> idList = new ArrayList<>();
-        Set<Map.Entry<String, String>> idSet = getIdMap().entrySet();
-        for (Map.Entry<String, String> entry : idSet) {
-            if (entry.getValue().split("\\|").length < 1) {
-                idList.add(entry.getKey());
-                Log.i(TAG, "未知id: " + entry.getKey());
+        for (Map.Entry<String, String> entry : getIdMap().entrySet()) {
+            if ("我".equals(entry.getValue()) || entry.getKey().equals(currentUid)) {
+                continue;
             }
+            idList.add(entry.getKey());
         }
         return idList;
     }
@@ -87,11 +124,11 @@ public class FriendIdMap {
             shouldReload = false;
             idMap = new ConcurrentHashMap<>();
             String str = FileUtils.readFromFile(FileUtils.getFriendIdMapFile());
-            if (str != null && str.length() > 0) {
+            if (str != null && !str.isEmpty()) {
                 try {
                     String[] idSet = str.split("\n");
                     for (String s : idSet) {
-                        Log.i(TAG, s);
+                        // Log.i(TAG, s);
                         int ind = s.indexOf(":");
                         idMap.put(s.substring(0, ind), s.substring(ind + 1));
                     }
@@ -102,6 +139,18 @@ public class FriendIdMap {
             }
         }
         return idMap;
+    }
+
+    public static void waitingCurrentUid() throws InterruptedException {
+        int count = 1;
+        while (getCurrentUid() == null || getCurrentUid().isEmpty()) {
+            if (count > 3) {
+                throw new InterruptedException("获取当前用户超时");
+            } else {
+                count++;
+                Thread.sleep(1000);
+            }
+        }
     }
 
 }

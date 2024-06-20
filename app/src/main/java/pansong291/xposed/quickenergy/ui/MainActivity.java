@@ -7,26 +7,34 @@ import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import pansong291.xposed.quickenergy.R;
+import pansong291.xposed.quickenergy.data.RuntimeInfo;
+import pansong291.xposed.quickenergy.entity.FriendWatch;
+import pansong291.xposed.quickenergy.util.Config;
 import pansong291.xposed.quickenergy.util.FileUtils;
+import pansong291.xposed.quickenergy.util.LanguageUtil;
 import pansong291.xposed.quickenergy.util.PermissionUtil;
-import pansong291.xposed.quickenergy.util.RandomUtils;
 import pansong291.xposed.quickenergy.util.Statistics;
 
+import java.util.ArrayList;
+import java.util.Locale;
+
 public class MainActivity extends Activity {
-    private static String[] strArray;
     TextView tvStatistics;
-    Button btnHelp;
+
+    public static String version = "";
 
     private static boolean isExpModuleActive(Context context) {
         boolean isExp = false;
@@ -60,29 +68,39 @@ public class MainActivity extends Activity {
         return isExp;
     }
 
+    /**
+     * 判断当前应用是否是debug状态
+     */
+    public static boolean isApkInDebug(Context context) {
+        try {
+            ApplicationInfo info = context.getApplicationInfo();
+            return (info.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        LanguageUtil.setLocale(this);
         setContentView(R.layout.activity_main);
-        setModuleActive(isExpModuleActive(this));
-        PermissionUtil.requestPermissions(this);
+        RuntimeInfo.process = "app";
 
         tvStatistics = findViewById(R.id.tv_statistics);
-        btnHelp = findViewById(R.id.btn_help);
-        if (strArray == null)
-            strArray = getResources().getStringArray(R.array.sentences);
-        if (strArray != null)
-            btnHelp.setText(strArray[RandomUtils.nextInt(0, strArray.length)]);
+//        Button btnGithub = findViewById(R.id.btn_github);
+//        DisplayMetrics metrics = this.getResources().getDisplayMetrics();
+//        int height = metrics.heightPixels;
 
-        String version = "";
         try {
             PackageInfo packageInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-            version = packageInfo.versionName + "-" + packageInfo.versionCode;
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
+            version = " v" + packageInfo.versionName;
+        } catch (PackageManager.NameNotFoundException ignored) {
         }
-        this.setTitle(this.getTitle() + "[" + version + "]");
+        this.setTitle(this.getTitle() + version);
 
+        setModuleActive(isExpModuleActive(this));
+        PermissionUtil.requestPermissions(this);
         new AlertDialog.Builder(this)
                 .setTitle("提示")
                 .setMessage("本APP是为了学习研究开发，免费提供，不得进行任何形式的转发、发布、传播。请于24小时内卸载本APP。如果您是购买的可能已经被骗，请联系卖家退款。")
@@ -98,8 +116,13 @@ public class MainActivity extends Activity {
 
     @SuppressLint("NonConstantResourceId")
     public void onClick(View v) {
-        if (v.getId() == R.id.btn_help) {
-            sendBroadcast(new Intent("com.eg.android.AlipayGphone.xqe.broadcast"));
+        if (v.getId() == R.id.btn_test) {
+            if (isApkInDebug(this)) {
+                Toast toast = Toast.makeText(this, "测试", Toast.LENGTH_SHORT);
+                toast.setGravity(toast.getGravity(), toast.getXOffset(), Config.toastOffsetY());
+                toast.show();
+                sendBroadcast(new Intent("com.eg.android.AlipayGphone.xqe.test"));
+            }
             return;
         }
 
@@ -117,9 +140,16 @@ public class MainActivity extends Activity {
                 data += FileUtils.getOtherLogFile().getAbsolutePath();
                 break;
 
-            case R.id.btn_help:
-                data = "https://github.com/pansong291/XQuickEnergy/wiki";
+            case R.id.btn_github:
+                data = "https://github.com/constanline/XQuickEnergy";
                 break;
+
+            case R.id.btn_settings:
+                startActivity(new Intent(this, SettingsActivity.class));
+                return;
+            case R.id.btn_friend_watch:
+                ListDialog.show(this, getString(R.string.friend_watch), FriendWatch.getList(), new ArrayList<>(), null, ListDialog.ListType.SHOW);
+                return;
         }
         Intent it = new Intent(this, HtmlViewerActivity.class);
         it.setData(Uri.parse(data));
@@ -151,13 +181,13 @@ public class MainActivity extends Activity {
 
             case 2:
                 if (FileUtils.copyTo(FileUtils.getStatisticsFile(), FileUtils.getExportedStatisticsFile()))
-                    Toast.makeText(this, "Export success", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "导出成功！", Toast.LENGTH_SHORT).show();
                 break;
 
             case 3:
                 if (FileUtils.copyTo(FileUtils.getExportedStatisticsFile(), FileUtils.getStatisticsFile())) {
                     tvStatistics.setText(Statistics.getText());
-                    Toast.makeText(this, "Import success", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "导入成功！", Toast.LENGTH_SHORT).show();
                 }
                 break;
 
@@ -169,8 +199,10 @@ public class MainActivity extends Activity {
     }
 
     private void setModuleActive(boolean b) {
-        TextView tvUnActive = findViewById(R.id.tv_unactive);
-        tvUnActive.setVisibility(b ? View.GONE : View.VISIBLE);
+//        ImageView ivUnactivated = findViewById(R.id.iv_unactivated);
+//        ivUnactivated.setVisibility(b ? View.GONE : View.VISIBLE);
+
+        this.setTitle(this.getTitle() + (b ? "【已激活】" : "【未激活】"));
     }
 
 }

@@ -5,11 +5,11 @@ android {
 
     defaultConfig {
         applicationId "pansong291.xposed.quickenergy.repair"
-        minSdkVersion 23
+        minSdk 21
         //noinspection ExpiredTargetSdkVersion
-        targetSdkVersion 29
-        versionCode 17
-        versionName "1.0.4"
+        targetSdk 29
+        versionCode 73
+        versionName "1.2.4"
     }
     buildTypes {
         release {
@@ -23,8 +23,6 @@ android {
             if (outputFile != null && outputFile.name.endsWith('.apk')) {
                 if (variant.buildType.name == 'release') {
                     outputFileName = "xqe-sesame-v${defaultConfig.versionName}.apk"
-                } else if (variant.buildType.name == 'debug') {
-                    outputFileName = "xqe-sesame-v${defaultConfig.versionName}-debug.apk"
                 }
             }
         }

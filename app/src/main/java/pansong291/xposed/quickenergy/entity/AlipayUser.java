@@ -1,12 +1,13 @@
-package pansong291.xposed.quickenergy.ui;
+package pansong291.xposed.quickenergy.entity;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import pansong291.xposed.quickenergy.util.FriendIdMap;
 
-public class AlipayUser extends AlipayId {
+public class AlipayUser extends IdAndName {
     private static List<AlipayUser> list;
 
     public AlipayUser(String i, String n) {
